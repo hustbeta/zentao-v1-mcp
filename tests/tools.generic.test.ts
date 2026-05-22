@@ -23,4 +23,8 @@ describe("generic tools", () => {
       /unsupported/i,
     );
   });
+
+  it("preserves parameter validation errors for supported resources", () => {
+    expect(() => resolveGenericListRequest({ resource: "users", page: 0 })).toThrow(/greater than 0/i);
+  });
 });

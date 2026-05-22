@@ -126,6 +126,8 @@ export function registerGenericTools(server: McpServerLike, client: ZentaoReques
 function parseListArgs(args: GenericListArgs): GenericListArgs {
   const result = listSchema.safeParse(args);
   if (!result.success) {
+    // Unknown resources get a concise allowlist error; supported resources should keep field-level Zod errors.
+    if (isListResource(args.resource)) throw result.error;
     throw unsupportedResourceError(args.resource);
   }
   return result.data;
@@ -134,9 +136,19 @@ function parseListArgs(args: GenericListArgs): GenericListArgs {
 function parseGetArgs(args: GenericGetArgs): GenericGetArgs {
   const result = getSchema.safeParse(args);
   if (!result.success) {
+    // Keep bad id/type diagnostics actionable once the resource enum itself is valid.
+    if (isGetResource(args.resource)) throw result.error;
     throw unsupportedResourceError(args.resource);
   }
   return result.data;
+}
+
+function isListResource(resource: unknown): resource is ListResource {
+  return listResourceKeys.includes(resource as ListResource);
+}
+
+function isGetResource(resource: unknown): resource is GetResource {
+  return getResourceKeys.includes(resource as GetResource);
 }
 
 function pathParamsForList(
