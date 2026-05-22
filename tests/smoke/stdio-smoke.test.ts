@@ -1,4 +1,5 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { describe, expect, it } from "vitest";
 import { createServer } from "../../src/server.js";
@@ -32,6 +33,30 @@ describe("mcp smoke", () => {
     await client.close();
     await server.close();
   });
+
+  it("serves tools/list through the built CLI over stdio", async () => {
+    const transport = new StdioClientTransport({
+      command: process.execPath,
+      args: ["dist/cli.js", "serve"],
+      cwd: process.cwd(),
+      // The CLI should only need config to initialize; listTools must not trigger a ZenTao login.
+      env: {
+        ZENTAO_BASE_URL: "https://zentao.example.com",
+        ZENTAO_ACCOUNT: "demo",
+        ZENTAO_PASSWORD: "secret",
+      },
+      stderr: "pipe",
+    });
+    const client = new Client({ name: "zentao-v1-mcp-stdio-test", version: "0.1.0" });
+
+    await client.connect(transport);
+    const result = await client.listTools();
+
+    expect(result.tools.map((tool) => tool.name)).toContain("zentao_list_products");
+    expect(result.tools).toHaveLength(15);
+
+    await client.close();
+  }, 10_000);
 
   it("returns redacted HTTP error details from tool handlers", async () => {
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
