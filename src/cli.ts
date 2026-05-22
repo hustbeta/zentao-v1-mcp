@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { defaultConfigPath, loadConfig, redactConfig, writeExampleConfig } from "./config.js";
+import { serveStdio } from "./server.js";
 import { ZentaoClient } from "./zentao/client.js";
 
 const command = process.argv[2] ?? "serve";
@@ -30,8 +31,7 @@ async function main(): Promise<void> {
       console.error("Login OK");
     }
   } else {
-    // Serve is wired after the MCP server and HTTP client exist.
-    console.error(`zentao-v1-mcp ${command} is not wired yet`);
+    await serveStdio(new ZentaoClient({ config: loadConfig() }));
   }
 }
 

@@ -26,12 +26,17 @@ export type ZentaoRequester = {
   request(request: ToolRequest): Promise<unknown>;
 };
 
+export type McpTextResult = {
+  isError?: boolean;
+  content: Array<{ type: "text"; text: string }>;
+};
+
 export type McpServerLike = {
   tool(
     name: string,
     description: string,
     paramsSchema: z.ZodRawShape,
-    handler: (args: Record<string, unknown>) => Promise<unknown>,
+    handler: (args: Record<string, unknown>) => Promise<McpTextResult>,
   ): void;
 };
 
