@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createWriteSummary, ensureConfirmed } from "../src/safety.js";
+import { resolveCreateBuildRequest, resolveUpdateBuildRequest } from "../src/tools/buildTools.js";
 
 describe("write safety", () => {
   it("blocks writes without confirm=true", () => {
@@ -19,5 +20,51 @@ describe("write safety", () => {
 
     expect(summary.requires_confirmation).toBe(true);
     expect(JSON.stringify(summary)).not.toContain("hidden");
+  });
+});
+
+describe("build tools", () => {
+  it("dry-runs create build without confirm=true", async () => {
+    const calls: unknown[] = [];
+    const result = await resolveCreateBuildRequest(
+      {
+        project_id: 1,
+        execution: 2,
+        product: 3,
+        name: "build-1",
+        builder: "admin",
+      },
+      async (request) => calls.push(request),
+    );
+
+    expect(calls).toHaveLength(0);
+    expect(JSON.stringify(result)).toContain("requires_confirmation");
+  });
+
+  it("sends create build when confirmed", async () => {
+    const calls: unknown[] = [];
+    await resolveCreateBuildRequest(
+      {
+        project_id: 1,
+        execution: 2,
+        product: 3,
+        name: "build-1",
+        builder: "admin",
+        confirm: true,
+      },
+      async (request) => calls.push(request),
+    );
+
+    expect(calls[0]).toMatchObject({
+      method: "POST",
+      path: "/projects/1/builds",
+      body: { execution: 2, product: 3, name: "build-1", builder: "admin" },
+    });
+  });
+
+  it("requires at least one update field", () => {
+    expect(() => resolveUpdateBuildRequest({ build_id: 9, confirm: true }, async () => undefined)).toThrow(
+      /at least one/,
+    );
   });
 });
