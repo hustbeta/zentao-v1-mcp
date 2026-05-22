@@ -27,7 +27,7 @@ export function createServer(client: ZentaoRequester): CreatedZentaoMcpServer {
           return await handler(args as Record<string, unknown>);
         } catch (error) {
           // Tool handlers must return MCP errors instead of letting HTTP/config errors terminate stdio.
-          return errorText(error instanceof Error ? error.message : String(error));
+          return errorText(error instanceof Error ? error.message : String(error), errorDetails(error));
         }
       });
     },
@@ -47,4 +47,23 @@ export function createServer(client: ZentaoRequester): CreatedZentaoMcpServer {
 export async function serveStdio(client: ZentaoRequester): Promise<void> {
   const server = createServer(client);
   await server.connect(new StdioServerTransport());
+}
+
+function errorDetails(error: unknown): unknown {
+  if (
+    error &&
+    typeof error === "object" &&
+    "status" in error &&
+    "path" in error &&
+    "responseBody" in error
+  ) {
+    // ZenTaoHttpError already redacts responseBody; preserve it so MCP callers can diagnose API failures.
+    return {
+      status: error.status,
+      path: error.path,
+      responseBody: error.responseBody,
+    };
+  }
+
+  return undefined;
 }
