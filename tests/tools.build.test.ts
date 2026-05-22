@@ -62,9 +62,47 @@ describe("build tools", () => {
     });
   });
 
+  it("accepts numeric branch IDs for create build", async () => {
+    const calls: unknown[] = [];
+    await resolveCreateBuildRequest(
+      {
+        project_id: 1,
+        execution: 2,
+        product: 3,
+        name: "build-1",
+        builder: "admin",
+        branch: 0,
+        confirm: true,
+      },
+      async (request) => calls.push(request),
+    );
+
+    expect(calls[0]).toMatchObject({
+      body: { branch: 0 },
+    });
+  });
+
   it("requires at least one update field", () => {
     expect(() => resolveUpdateBuildRequest({ build_id: 9, confirm: true }, async () => undefined)).toThrow(
       /at least one/,
     );
+  });
+
+  it("accepts numeric branch IDs for update build", async () => {
+    const calls: unknown[] = [];
+    await resolveUpdateBuildRequest(
+      {
+        build_id: 9,
+        branch: 0,
+        confirm: true,
+      },
+      async (request) => calls.push(request),
+    );
+
+    expect(calls[0]).toMatchObject({
+      method: "PUT",
+      path: "/builds/9",
+      body: { branch: 0 },
+    });
   });
 });

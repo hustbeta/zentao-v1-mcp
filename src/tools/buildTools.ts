@@ -11,7 +11,7 @@ const buildFieldShape = {
   product: z.number().int().positive().optional().describe("ZenTao product ID."),
   name: z.string().min(1).optional().describe("Build name."),
   builder: z.string().min(1).optional().describe("Build creator account."),
-  branch: z.string().min(1).optional().describe("Product branch."),
+  branch: z.number().int().nonnegative().optional().describe("ZenTao product branch ID; 0 is the main branch."),
   date: z.string().min(1).optional().describe("Build date accepted by ZenTao."),
   scmPath: z.string().min(1).optional().describe("Source code path."),
   filePath: z.string().min(1).optional().describe("Build artifact path."),
@@ -69,7 +69,7 @@ export function resolveCreateBuildRequest(args: CreateBuildArgs, dispatch: Dispa
 export function resolveUpdateBuildRequest(args: UpdateBuildArgs, dispatch: Dispatch) {
   const parsed = updateBuildSchema.parse(args);
   const path = renderPath(endpoints.updateBuild, { build_id: parsed.build_id });
-  // 708_修改版本.md does not document a body; first version only mirrors create-build fields.
+  // 708 update-build doc does not list a body; mirror create-build fields to avoid broad write capability.
   const body = pickDefined(parsed, updateFieldNames);
   if (Object.keys(body).length === 0) {
     throw new Error("update build requires at least one update field");
