@@ -1,0 +1,38 @@
+name: Publish to npm
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish package
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          # npm trusted publishing requires a recent npm CLI; Node 24 includes a compatible npm version.
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: npm ci
+
+      # prepublishOnly is the final local gate before npm accepts the package.
+      - name: Build, test, smoke, and audit
+        run: npm run prepublishOnly
+
+      # This uses npm trusted publishing. Configure the GitHub repository as a trusted publisher on npm before pushing a tag.
+      - name: Publish
+        run: npm publish --access public
