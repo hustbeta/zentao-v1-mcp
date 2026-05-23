@@ -77,49 +77,8 @@ zentao-v1-mcp print-config
 }
 ```
 
-## Tools
+## Further Reading
 
-The first version exposes 15 tools:
-
-- `zentao_get_current_user`
-- `zentao_list_products`
-- `zentao_list_projects`
-- `zentao_list_executions`
-- `zentao_list_stories`
-- `zentao_list_tasks`
-- `zentao_list_bugs`
-- `zentao_list_builds`
-- `zentao_get_build`
-- `zentao_create_build`
-- `zentao_update_build`
-- `zentao_list_objects`
-- `zentao_get_object`
-- `zentao_list_releases`
-- `zentao_get_task_efforts`
-
-### Query Bugs By Execution
-
-`zentao_list_bugs` supports product-level and execution-level queries. When both IDs are known, pass both for the most deterministic result:
-
-```json
-{
-  "product_id": 60,
-  "execution_id": 1510,
-  "status": "unclosed",
-  "assigned_to_account": "zhuxiaokun"
-}
-```
-
-If only `execution_id` is provided, the server tries to infer the product before scanning product bugs locally. `status: "unclosed"` excludes only `closed`.
-
-See [the design notes](doc/design/zentao-v1-mcp-design.md#zentao_list_bugs-执行范围第一版边界) for the full execution-scoped bug query behavior and known ZenTao v1 API limits.
-
-## Write Safety
-
-Only build creation and build update are exposed as write operations. Both require `confirm=true` to send a real ZenTao request.
-
-Without `confirm=true`, `zentao_create_build` and `zentao_update_build` return a dry-run summary with `requires_confirmation=true` and do not send an HTTP request.
-
-## Development
-
-Developer background, local verification commands, and first-version design boundaries live in [doc/dev/README.md](doc/dev/README.md).
+- [Usage Guide](doc/usage/README.en.md): full tool surface, execution-scoped bug queries, write-safety semantics.
+- [Developer Notes](doc/dev/README.md): first-version boundaries, local verification commands, module layout.
+- [Design Document](doc/design/zentao-v1-mcp-design.md): full first-version design.
