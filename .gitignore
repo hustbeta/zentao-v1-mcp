@@ -141,3 +141,6 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Superpowers execution plans are local working notes, not repository docs.
+docs/superpowers/plans/
