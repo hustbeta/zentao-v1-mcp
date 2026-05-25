@@ -10,10 +10,19 @@ import {
   fetchAllPagesForTest,
   listBugsForTest,
   parseBugScopeForTest,
+  registerQueryTools,
   resolveQueryToolRequest,
+  type McpServerLike,
+  type McpTextResult,
+  type ZentaoRequester,
 } from "../src/tools/queryTools.js";
 import { endpoints } from "../src/zentao/endpoints.js";
 import { createServer } from "../src/server.js";
+
+type RegisteredQueryTool = {
+  name: string;
+  handler: (args: Record<string, unknown>) => Promise<McpTextResult>;
+};
 
 describe("query tools", () => {
   it("uses pagination defaults", () => {
@@ -88,6 +97,30 @@ describe("zentao_list_bugs scope validation", () => {
 
   it("points bug-id detail lookups to zentao_get_object when bug list scope is missing", () => {
     expect(() => parseBugScopeForTest({})).toThrow(
+      /zentao_get_object.*resource: "bug".*\bid\b/,
+    );
+  });
+
+  it("points registered bug-list missing-scope calls to zentao_get_object", async () => {
+    const registeredTools: RegisteredQueryTool[] = [];
+    const server: McpServerLike = {
+      tool(name, _description, _paramsSchema, handler) {
+        registeredTools.push({ name, handler });
+      },
+    };
+    const client: ZentaoRequester = {
+      request: async () => {
+        throw new Error("client should not be called for missing bug scope");
+      },
+    };
+
+    registerQueryTools(server, client);
+
+    const bugListTool = registeredTools.find((tool) => tool.name === "zentao_list_bugs");
+    expect(bugListTool).toBeDefined();
+    if (bugListTool === undefined) throw new Error("zentao_list_bugs was not registered");
+
+    await expect(bugListTool.handler({})).rejects.toThrow(
       /zentao_get_object.*resource: "bug".*\bid\b/,
     );
   });
