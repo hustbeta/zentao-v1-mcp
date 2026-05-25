@@ -136,13 +136,18 @@ const toolSchemas = {
 
 const toolDescriptions: Record<QueryToolName, string> = {
   zentao_get_current_user: "Get the authenticated ZenTao user profile.",
-  zentao_list_products: "List ZenTao products. Returns paginated product records.",
-  zentao_list_projects: "List ZenTao projects. Returns paginated project records.",
-  zentao_list_executions: "List executions under a ZenTao project.",
-  zentao_list_stories: "List stories by exactly one product, project, or execution scope.",
-  zentao_list_tasks: "List tasks under a ZenTao execution.",
+  zentao_list_products:
+    'List ZenTao products. Returns paginated product records. If the user provides a product ID and asks for detail, use zentao_get_object with resource: "product".',
+  zentao_list_projects:
+    'List ZenTao projects. Returns paginated project records. If the user provides a project ID and asks for detail, use zentao_get_object with resource: "project".',
+  zentao_list_executions:
+    'List executions under a ZenTao project. If the user provides an execution ID and asks for detail, use zentao_get_object with resource: "execution".',
+  zentao_list_stories:
+    'List stories by exactly one product, project, or execution scope. If the user provides a story ID and asks for detail, use zentao_get_object with resource: "story".',
+  zentao_list_tasks:
+    'List tasks under a ZenTao execution. If the user provides a task ID and asks for task detail, use zentao_get_object with resource: "task"; use zentao_get_task_efforts only for task effort logs.',
   zentao_list_bugs:
-    "List bugs under a ZenTao product, with optional local filtering by execution, status, and assignee. Execution-scoped filtering scans product bugs because ZenTao v1 documents product-scoped bug listing only.",
+    'List bugs under a ZenTao product, with optional local filtering by execution, status, and assignee. This is for scoped bug lists, not one bug id; for bug id detail, use zentao_get_object with resource: "bug" and id. Execution-scoped filtering scans product bugs because ZenTao v1 documents product-scoped bug listing only.',
   zentao_list_builds: "List builds by exactly one project or execution scope.",
   zentao_get_build: "Get one ZenTao build by ID.",
   zentao_list_releases: "List releases by exactly one product or project scope.",

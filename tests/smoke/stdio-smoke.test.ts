@@ -30,6 +30,15 @@ describe("mcp smoke", () => {
     expect(result.tools.map((tool) => tool.name)).toContain("zentao_get_object");
     expect(result.tools).toHaveLength(server.toolNamesForTest().length);
 
+    const getObjectTool = result.tools.find((tool) => tool.name === "zentao_get_object");
+    expect(getObjectTool?.description).toContain("bug 80793");
+    expect(getObjectTool?.description).toContain("task");
+
+    const listBugsTool = result.tools.find((tool) => tool.name === "zentao_list_bugs");
+    expect(listBugsTool?.description).toContain("list");
+    expect(listBugsTool?.description).toContain("bug id");
+    expect(listBugsTool?.description).toContain("zentao_get_object");
+
     await client.close();
     await server.close();
   });
