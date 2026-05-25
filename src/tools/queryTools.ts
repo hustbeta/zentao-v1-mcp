@@ -392,15 +392,6 @@ function exactlyOneScope<T extends string>(
   return present[0];
 }
 
-function atLeastOneScope<T extends string>(
-  parsed: Partial<Record<T, unknown>>,
-  keys: readonly T[],
-): void {
-  if (!keys.some((key) => parsed[key] !== undefined)) {
-    throw new Error(`Expected at least one of: ${keys.join(", ")}`);
-  }
-}
-
 function atLeastOneBugScope(
   parsed: Partial<Record<"product_id" | "execution_id", unknown>>,
 ): void {
