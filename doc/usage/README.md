@@ -26,6 +26,49 @@ English version: [README.en.md](README.en.md)
 
 工具签名、范围参数互斥规则、低频通用工具的资源枚举见[设计文档 — MCP 工具面](../design/zentao-v1-mcp-design.md#mcp-工具面)。
 
+## 按 ID 查询对象详情
+
+当用户已经提供具体对象 ID，并询问详情、内容或分析时，优先使用 `zentao_get_object`，不要先走同领域的列表工具。详情查询只需要对象类型和 ID，例如：
+
+```json
+{
+  "resource": "bug",
+  "id": 80793
+}
+```
+
+`zentao_get_object` 支持以下详情资源：
+
+| resource | 对象 |
+| --- | --- |
+| `user` | 用户 |
+| `department` | 部门 |
+| `program` | 项目集 |
+| `product_plan` | 产品计划 |
+| `product` | 产品 |
+| `project` | 项目 |
+| `execution` | 执行 |
+| `story` | 需求 |
+| `task` | 任务 |
+| `bug` | Bug |
+| `testcase` | 用例 |
+| `testtask` | 测试单 |
+| `feedback` | 反馈 |
+| `ticket` | 工单 |
+
+高冲突提示示例：
+
+| 用户提示 | 推荐工具 |
+| --- | --- |
+| 查看 bug 80793 的详情 / 内容 / 原因分析 | `zentao_get_object` with `resource="bug"`, `id=80793` |
+| 分析需求 123 | `zentao_get_object` with `resource="story"`, `id=123` |
+| 看任务 456 详情 | `zentao_get_object` with `resource="task"`, `id=456` |
+| 执行 1510 是什么 | `zentao_get_object` with `resource="execution"`, `id=1510` |
+| 产品 60 的详情 | `zentao_get_object` with `resource="product"`, `id=60` |
+| 项目 7 的内容 | `zentao_get_object` with `resource="project"`, `id=7` |
+
+`zentao_list_bugs`、`zentao_list_stories`、`zentao_list_tasks` 等列表工具用于分页的范围列表；只有对象类型和 ID 的提示通常是详情查询。
+
 ## 按执行查询 Bug
 
 `zentao_list_bugs` 支持产品级和执行级查询。已知两个 ID 时，建议同时传入，结果最明确：

@@ -26,6 +26,49 @@ The first version exposes 15 tools:
 
 Tool signatures, scope-parameter exclusivity rules, and the resource enums for the generic tools are documented in [Design — MCP Tool Surface](../design/zentao-v1-mcp-design.md#mcp-工具面).
 
+## Get Object Details By ID
+
+When the user already provides a concrete object ID and asks for details, content, or analysis, prefer `zentao_get_object` instead of same-domain list tools. Detail lookups need only the object type and ID, for example:
+
+```json
+{
+  "resource": "bug",
+  "id": 80793
+}
+```
+
+`zentao_get_object` supports these detail resources:
+
+| resource | Object |
+| --- | --- |
+| `user` | User |
+| `department` | Department |
+| `program` | Program |
+| `product_plan` | Product plan |
+| `product` | Product |
+| `project` | Project |
+| `execution` | Execution |
+| `story` | Story |
+| `task` | Task |
+| `bug` | Bug |
+| `testcase` | Test case |
+| `testtask` | Test task |
+| `feedback` | Feedback |
+| `ticket` | Ticket |
+
+High-conflict prompt examples:
+
+| User prompt | Recommended tool |
+| --- | --- |
+| Show bug 80793 details / content / root-cause analysis | `zentao_get_object` with `resource="bug"`, `id=80793` |
+| Analyze story 123 | `zentao_get_object` with `resource="story"`, `id=123` |
+| Show task 456 details | `zentao_get_object` with `resource="task"`, `id=456` |
+| What is execution 1510 | `zentao_get_object` with `resource="execution"`, `id=1510` |
+| Product 60 details | `zentao_get_object` with `resource="product"`, `id=60` |
+| Project 7 content | `zentao_get_object` with `resource="project"`, `id=7` |
+
+List tools such as `zentao_list_bugs`, `zentao_list_stories`, and `zentao_list_tasks` are for paginated scoped lists; prompts with only object type and ID are usually detail lookups.
+
 ## Query Bugs By Execution
 
 `zentao_list_bugs` supports product-level and execution-level queries. When both IDs are known, pass both for the most deterministic result:
