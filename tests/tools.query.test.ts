@@ -85,6 +85,12 @@ describe("zentao_list_bugs scope validation", () => {
       /Expected at least one of: product_id, execution_id/,
     );
   });
+
+  it("points bug-id detail lookups to zentao_get_object when bug list scope is missing", () => {
+    expect(() => parseBugScopeForTest({})).toThrow(/zentao_get_object/);
+    expect(() => parseBugScopeForTest({})).toThrow(/resource.*bug/i);
+    expect(() => parseBugScopeForTest({})).toThrow(/id/);
+  });
 });
 
 describe("filterExecutionBugs", () => {

@@ -29,6 +29,13 @@ describe("generic tools", () => {
     expect(resolveGenericGetRequest({ resource: "ticket", id: 9 }).path).toBe("/tickets/9");
   });
 
+  it("gets bug detail by bug id through the generic detail tool", () => {
+    expect(resolveGenericGetRequest({ resource: "bug", id: 80793 })).toMatchObject({
+      method: "GET",
+      path: "/bugs/80793",
+    });
+  });
+
   it("describes get-object as an ID detail lookup for common resources", () => {
     const registeredTools: RegisteredTool[] = [];
     const server: McpServerLike = {

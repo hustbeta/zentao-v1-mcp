@@ -9,6 +9,9 @@ import {
   type BugFilters,
 } from "./bugQuery.js";
 
+const bugListScopeError =
+  'Expected at least one of: product_id, execution_id. If you need one bug by bug id, call zentao_get_object with resource: "bug" and id.';
+
 export type ToolRequest = {
   method: Endpoint["method"];
   path: string;
@@ -215,7 +218,7 @@ export function registerQueryTools(server: McpServerLike, client: ZentaoRequeste
     server.tool(toolName, toolDescriptions[toolName], toolSchemas[toolName].shape, async (args) => {
       if (toolName === "zentao_list_bugs") {
         const parsed = bugScopeSchema.parse(args);
-        atLeastOneScope(parsed, ["product_id", "execution_id"] as const);
+        atLeastOneBugScope(parsed);
 
         if (isPlainProductBugList(parsed, args)) {
           const request = resolveQueryToolRequest(toolName, {
@@ -398,6 +401,15 @@ function atLeastOneScope<T extends string>(
   }
 }
 
+function atLeastOneBugScope(
+  parsed: Partial<Record<"product_id" | "execution_id", unknown>>,
+): void {
+  if (parsed.product_id === undefined && parsed.execution_id === undefined) {
+    // A bare "bug 123" user request is a detail lookup, not a scoped list query.
+    throw new Error(bugListScopeError);
+  }
+}
+
 function assertNoBugAdvancedFilters(args: unknown): void {
   if (!args || typeof args !== "object") return;
   const input = args as Record<string, unknown>;
@@ -500,7 +512,7 @@ function readNonNegativeInteger(response: unknown, key: string): number | undefi
 
 export function parseBugScopeForTest(args: unknown): z.infer<typeof bugScopeSchema> {
   const parsed = bugScopeSchema.parse(args);
-  atLeastOneScope(parsed, ["product_id", "execution_id"] as const);
+  atLeastOneBugScope(parsed);
   return parsed;
 }
 
@@ -516,6 +528,6 @@ export async function listBugsForTest(
   args: unknown,
 ): Promise<ListBugsResult> {
   const parsed = bugScopeSchema.parse(args);
-  atLeastOneScope(parsed, ["product_id", "execution_id"] as const);
+  atLeastOneBugScope(parsed);
   return listBugs(client, parsed);
 }
