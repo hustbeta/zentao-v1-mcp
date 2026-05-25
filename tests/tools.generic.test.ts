@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { resolveGenericGetRequest, resolveGenericListRequest } from "../src/tools/genericTools.js";
+import {
+  genericToolMetadataForTest,
+  resolveGenericGetRequest,
+  resolveGenericListRequest,
+} from "../src/tools/genericTools.js";
 
 describe("generic tools", () => {
   it("lists scoped product plans", () => {
@@ -16,6 +20,16 @@ describe("generic tools", () => {
 
   it("gets constrained detail resources", () => {
     expect(resolveGenericGetRequest({ resource: "ticket", id: 9 }).path).toBe("/tickets/9");
+  });
+
+  it("describes get-object as an ID detail lookup for common resources", () => {
+    expect(genericToolMetadataForTest.get.description).toContain("by ID");
+    expect(genericToolMetadataForTest.get.description).toContain("bug");
+    expect(genericToolMetadataForTest.get.description).toContain("story");
+    expect(genericToolMetadataForTest.get.description).toContain("task");
+    expect(genericToolMetadataForTest.get.description).toContain("execution");
+    expect(genericToolMetadataForTest.get.resourceDescription).toContain("bug");
+    expect(genericToolMetadataForTest.get.resourceDescription).toContain("ticket");
   });
 
   it("rejects unsupported resources before HTTP dispatch", () => {

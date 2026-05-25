@@ -64,6 +64,20 @@ const getResources = {
   ticket: endpoints.ticket,
 } satisfies Record<GetResource, Endpoint>;
 
+const getObjectDescription =
+  "Get one ZenTao object detail by ID. Use this when the user provides an object type and ID, such as bug 80793, story 123, task 456, execution 1510, product 60, project 7, testcase, testtask, feedback, or ticket.";
+
+const getResourceDescription =
+  "Detail resource type. Supported values: user, department, program, product_plan, product, project, execution, story, task, bug, testcase, testtask, feedback, ticket.";
+
+// Keep discovery text testable without registering a full MCP server.
+export const genericToolMetadataForTest = {
+  get: {
+    description: getObjectDescription,
+    resourceDescription: getResourceDescription,
+  },
+} as const;
+
 const paginationShape = {
   page: z.number().int().positive().default(1).describe("Page number, starting from 1."),
   limit: z.number().int().positive().max(100).default(20).describe("Maximum records to return."),
@@ -78,7 +92,7 @@ const listSchema = z.object({
 });
 
 const getSchema = z.object({
-  resource: z.enum(getResourceKeys).describe("Constrained detail resource."),
+  resource: z.enum(getResourceKeys).describe(getResourceDescription),
   id: z.number().int().positive().describe("ZenTao object ID."),
 });
 
@@ -117,7 +131,7 @@ export function registerGenericTools(server: McpServerLike, client: ZentaoReques
 
   server.tool(
     "zentao_get_object",
-    "Get one low-frequency ZenTao object through a constrained resource enum.",
+    getObjectDescription,
     getSchema.shape,
     async (args) => jsonText(await client.request(resolveGenericGetRequest(args as GenericGetArgs))),
   );
