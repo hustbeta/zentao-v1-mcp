@@ -1,9 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
-  genericToolMetadataForTest,
+  registerGenericTools,
   resolveGenericGetRequest,
   resolveGenericListRequest,
 } from "../src/tools/genericTools.js";
+import type { McpServerLike, ZentaoRequester } from "../src/tools/queryTools.js";
+
+type RegisteredTool = {
+  name: string;
+  description: string;
+  paramsSchema: Parameters<McpServerLike["tool"]>[2];
+};
 
 describe("generic tools", () => {
   it("lists scoped product plans", () => {
@@ -23,13 +30,27 @@ describe("generic tools", () => {
   });
 
   it("describes get-object as an ID detail lookup for common resources", () => {
-    expect(genericToolMetadataForTest.get.description).toContain("by ID");
-    expect(genericToolMetadataForTest.get.description).toContain("bug");
-    expect(genericToolMetadataForTest.get.description).toContain("story");
-    expect(genericToolMetadataForTest.get.description).toContain("task");
-    expect(genericToolMetadataForTest.get.description).toContain("execution");
-    expect(genericToolMetadataForTest.get.resourceDescription).toContain("bug");
-    expect(genericToolMetadataForTest.get.resourceDescription).toContain("ticket");
+    const registeredTools: RegisteredTool[] = [];
+    const server: McpServerLike = {
+      tool(name, description, paramsSchema) {
+        registeredTools.push({ name, description, paramsSchema });
+      },
+    };
+    const client: ZentaoRequester = { request: async () => ({}) };
+
+    registerGenericTools(server, client);
+
+    const getTool = registeredTools.find((tool) => tool.name === "zentao_get_object");
+    expect(getTool).toBeDefined();
+    if (getTool === undefined) throw new Error("zentao_get_object was not registered");
+
+    expect(getTool.description).toContain("by ID");
+    expect(getTool.description).toContain("bug");
+    expect(getTool.description).toContain("story");
+    expect(getTool.description).toContain("task");
+    expect(getTool.description).toContain("execution");
+    expect(getTool.paramsSchema.resource.description).toContain("bug");
+    expect(getTool.paramsSchema.resource.description).toContain("ticket");
   });
 
   it("rejects unsupported resources before HTTP dispatch", () => {
