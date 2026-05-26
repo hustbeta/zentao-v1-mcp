@@ -2,6 +2,10 @@
   "name": "zentao-v1-mcp",
   "version": "0.1.1",
   "description": "MCP server for ZenTao RESTful API v1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hustbeta/zentao-v1-mcp"
+  },
   "type": "module",
   "main": "dist/cli.js",
   "bin": {
