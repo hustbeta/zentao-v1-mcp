@@ -144,3 +144,6 @@ vite.config.ts.timestamp-*
 
 # Superpowers execution plans are local working notes, not repository docs.
 docs/superpowers/plans/
+
+# Local git worktrees created for isolated implementation branches.
+.worktrees/
