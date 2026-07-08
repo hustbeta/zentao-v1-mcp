@@ -4,7 +4,14 @@ import { endpointKeys, endpoints, renderPath } from "../src/zentao/endpoints.js"
 describe("endpoint registry", () => {
   it("contains only first-version write endpoints", () => {
     const writes = Object.entries(endpoints).filter(([, value]) => value.method !== "GET");
-    expect(writes.map(([key]) => key).sort()).toEqual(["createBuild", "token", "updateBuild"]);
+    expect(writes.map(([key]) => key).sort()).toEqual([
+      "changeStory",
+      "createBuild",
+      "createStory",
+      "token",
+      "updateBuild",
+      "updateStory",
+    ]);
   });
 
   it("renders path templates", () => {

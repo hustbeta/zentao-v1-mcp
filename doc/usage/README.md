@@ -6,7 +6,7 @@ English version: [README.en.md](README.en.md)
 
 ## 工具列表
 
-第一版暴露 15 个工具：
+第一版暴露 18 个工具：
 
 - `zentao_get_current_user`
 - `zentao_list_products`
@@ -19,6 +19,9 @@ English version: [README.en.md](README.en.md)
 - `zentao_get_build`
 - `zentao_create_build`
 - `zentao_update_build`
+- `zentao_create_story`
+- `zentao_change_story`
+- `zentao_update_story`
 - `zentao_list_objects`
 - `zentao_get_object`
 - `zentao_list_releases`
@@ -90,9 +93,9 @@ English version: [README.en.md](README.en.md)
 
 ## 写操作安全
 
-第一版只暴露版本创建和版本更新两个写操作。两者都需要 `confirm=true` 才会真正发送禅道请求。
+第一版只暴露版本创建、版本更新、需求创建、需求变更和需求其他字段更新这几类专用写操作。它们都需要 `confirm=true` 才会真正发送禅道请求。
 
-没有 `confirm=true` 时，`zentao_create_build` 和 `zentao_update_build` 只返回带有 `requires_confirmation=true` 的试运行摘要，不会发送 HTTP 请求。摘要包含 method、path 和脱敏后的请求体，可以让 agent 或调用方先确认再提交。
+没有 `confirm=true` 时，`zentao_create_build`、`zentao_update_build`、`zentao_create_story`、`zentao_change_story` 和 `zentao_update_story` 只返回带有 `requires_confirmation=true` 的试运行摘要，不会发送 HTTP 请求。摘要包含 method、path 和脱敏后的请求体，可以让 agent 或调用方先确认再提交。
 
 ```json
 {
@@ -105,4 +108,6 @@ English version: [README.en.md](README.en.md)
 }
 ```
 
-设计上不暴露通用创建或更新工具，也不暴露删除操作或任意 HTTP 代理。详细边界见[开发说明 — 第一版边界](../dev/README.md#第一版边界)，以及[设计文档 — 版本写工具](../design/zentao-v1-mcp-design.md#版本写工具)。
+创建需求使用 `zentao_create_story`，变更标题、描述和验收标准使用 `zentao_change_story`，更新模块、来源、优先级、分类、工时和关键词等其他字段使用 `zentao_update_story`。需求分类限制为 `feature | interface | performance | safe | experience | improve | other`，需求来源限制为 `customer | user | po | market`，优先级限制为 `1..4`。
+
+设计上不暴露通用创建或更新工具，也不暴露删除、关闭需求或任意 HTTP 代理。详细边界见[开发说明 — 第一版边界](../dev/README.md#第一版边界)，以及[设计文档 — 写工具](../design/zentao-v1-mcp-design.md#版本写工具)。

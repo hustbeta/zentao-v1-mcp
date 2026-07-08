@@ -5,6 +5,7 @@ import { errorText } from "./mcp/result.js";
 import { registerBuildTools } from "./tools/buildTools.js";
 import { registerGenericTools } from "./tools/genericTools.js";
 import { registerQueryTools, type McpServerLike, type ZentaoRequester } from "./tools/queryTools.js";
+import { registerStoryTools } from "./tools/storyTools.js";
 
 export type CreatedZentaoMcpServer = {
   connect(transport: Transport): Promise<void>;
@@ -35,6 +36,7 @@ export function createServer(client: ZentaoRequester): CreatedZentaoMcpServer {
 
   registerQueryTools(safeServer, client);
   registerBuildTools(safeServer, client);
+  registerStoryTools(safeServer, client);
   registerGenericTools(safeServer, client);
 
   return {

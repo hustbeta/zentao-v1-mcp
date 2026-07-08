@@ -14,6 +14,10 @@ describe("mcp smoke", () => {
     const tools = server.toolNamesForTest();
     expect(tools).toContain("zentao_list_products");
     expect(tools).toContain("zentao_create_build");
+    expect(tools).toContain("zentao_create_story");
+    expect(tools).toContain("zentao_change_story");
+    expect(tools).toContain("zentao_update_story");
+    expect(tools).toHaveLength(18);
     expect(tools.length).toBeLessThan(20);
   });
 
@@ -62,7 +66,10 @@ describe("mcp smoke", () => {
     const result = await client.listTools();
 
     expect(result.tools.map((tool) => tool.name)).toContain("zentao_list_products");
-    expect(result.tools).toHaveLength(15);
+    expect(result.tools.map((tool) => tool.name)).toContain("zentao_create_story");
+    expect(result.tools.map((tool) => tool.name)).toContain("zentao_change_story");
+    expect(result.tools.map((tool) => tool.name)).toContain("zentao_update_story");
+    expect(result.tools).toHaveLength(18);
 
     await client.close();
   }, 10_000);

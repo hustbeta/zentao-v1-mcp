@@ -6,7 +6,7 @@ Chinese version: [README.md](README.md)
 
 ## Tools
 
-The first version exposes 15 tools:
+The first version exposes 18 tools:
 
 - `zentao_get_current_user`
 - `zentao_list_products`
@@ -19,6 +19,9 @@ The first version exposes 15 tools:
 - `zentao_get_build`
 - `zentao_create_build`
 - `zentao_update_build`
+- `zentao_create_story`
+- `zentao_change_story`
+- `zentao_update_story`
 - `zentao_list_objects`
 - `zentao_get_object`
 - `zentao_list_releases`
@@ -90,9 +93,9 @@ For the full execution-scoped behavior and known ZenTao v1 API limits, see the [
 
 ## Write Safety
 
-Only build creation and build update are exposed as write operations. Both require `confirm=true` to send a real ZenTao request.
+Only build creation, build update, story creation, story change, and story metadata update are exposed as dedicated write operations. All require `confirm=true` to send a real ZenTao request.
 
-Without `confirm=true`, `zentao_create_build` and `zentao_update_build` return a dry-run summary with `requires_confirmation=true` and do not send an HTTP request. The summary includes the method, path, and a redacted request body so an agent or caller can confirm before committing.
+Without `confirm=true`, `zentao_create_build`, `zentao_update_build`, `zentao_create_story`, `zentao_change_story`, and `zentao_update_story` return a dry-run summary with `requires_confirmation=true` and do not send an HTTP request. The summary includes the method, path, and a redacted request body so an agent or caller can confirm before committing.
 
 ```json
 {
@@ -105,4 +108,6 @@ Without `confirm=true`, `zentao_create_build` and `zentao_update_build` return a
 }
 ```
 
-By design no generic create/update tool, delete operation, or arbitrary HTTP proxy is exposed. See [Developer Notes — First-Version Boundaries](../dev/README.md#第一版边界) and [Design — Build Write Tools](../design/zentao-v1-mcp-design.md#版本写工具) for the boundary rationale.
+Use `zentao_create_story` to create a story, `zentao_change_story` to change title/spec/verify fields, and `zentao_update_story` to update metadata such as module, source, priority, category, estimate, and keywords. Story category is limited to `feature | interface | performance | safe | experience | improve | other`, story source is limited to `customer | user | po | market`, and priority is limited to `1..4`.
+
+By design no generic create/update tool, delete operation, story close operation, or arbitrary HTTP proxy is exposed. See [Developer Notes — First-Version Boundaries](../dev/README.md#第一版边界) and [Design — Write Tools](../design/zentao-v1-mcp-design.md#版本写工具) for the boundary rationale.

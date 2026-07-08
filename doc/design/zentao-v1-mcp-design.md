@@ -4,14 +4,14 @@
 
 ## 目标
 
-构建一个禅道 RESTful API v1 MCP 服务器，让 AI agent 可以查询禅道数据，并执行现有工作流需要的有限版本管理写操作。
+构建一个禅道 RESTful API v1 MCP 服务器，让 AI agent 可以查询禅道数据，并执行现有工作流需要的有限版本和需求写操作。
 
 第一版覆盖 `doc/zentao_api_v1_doc` 下所有已文档化的 GET 接口，但不会为每个 API 接口暴露一个 MCP 工具。MCP 工具面保持在 20 个以内，通过高频、适合 agent 使用的工具和低频通用 list/get 工具组合覆盖能力。
 
 ## 非目标
 
 - 第一版不暴露删除操作。
-- 除版本创建和版本更新外，不暴露通用创建或更新操作。
+- 除版本创建、版本更新、需求创建、需求变更和需求其他字段更新这些专用工具外，不暴露通用创建或更新操作。
 - 不暴露原始的任意 HTTP 代理工具。
 - 第一版不支持多个禅道实例或多个配置档案。
 
@@ -72,7 +72,7 @@ npx -y zentao-v1-mcp
 
 ## MCP 工具面
 
-第一版暴露约 15 个工具：
+第一版暴露 18 个工具：
 
 1. `zentao_get_current_user`
 2. `zentao_list_products`
@@ -85,10 +85,13 @@ npx -y zentao-v1-mcp
 9. `zentao_get_build`
 10. `zentao_create_build`
 11. `zentao_update_build`
-12. `zentao_list_objects`
-13. `zentao_get_object`
-14. `zentao_list_releases`
-15. `zentao_get_task_efforts`
+12. `zentao_create_story`
+13. `zentao_change_story`
+14. `zentao_update_story`
+15. `zentao_list_objects`
+16. `zentao_get_object`
+17. `zentao_list_releases`
+18. `zentao_get_task_efforts`
 
 这个列表将暴露工具面控制在 20 个以内，同时仍覆盖所有已文档化的读接口。
 
@@ -201,6 +204,44 @@ npx -y zentao-v1-mcp
 
 摘要不能包含密码或 token。
 
+## 需求写工具
+
+需求创建映射到：
+
+- `POST /stories`
+
+`zentao_create_story` 必填字段：
+
+- `title`
+- `product`
+- `pri`
+- `category`
+
+可选字段：
+
+- `spec`
+- `verify`
+- `source`
+- `sourceNote`
+- `estimate`
+- `keywords`
+
+需求内容变更映射到：
+
+- `POST /stories/{story_id}/change`
+
+`zentao_change_story` 需要 `story_id`，并且至少包含 `title`、`spec`、`verify` 中的一个字段。
+
+需求其他字段更新映射到：
+
+- `PUT /stories/{story_id}`
+
+`zentao_update_story` 需要 `story_id`，并且至少包含 `module`、`source`、`sourceNote`、`pri`、`category`、`estimate`、`keywords` 中的一个字段。
+
+`category` 限制为 `feature | interface | performance | safe | experience | improve | other`，`source` 限制为 `customer | user | po | market`，`pri` 限制为整数 `1..4`。`zentao_change_story` 和 `zentao_update_story` 分开暴露，因为禅道将内容变更和其他字段更新拆成两个接口；合并成一个 MCP 工具会引入多请求半成功风险。
+
+三个需求写工具都需要 `confirm=true` 才会发送真实禅道请求。没有 `confirm=true` 时，只返回脱敏试运行摘要，不发起 HTTP 请求。第一版不暴露 `reviewer`、关闭需求、删除需求或任意 HTTP 代理。
+
 ## 接口注册表
 
 实现使用一个小型手写接口注册表。注册表记录：
@@ -249,8 +290,9 @@ npx -y zentao-v1-mcp
 - 配置测试覆盖配置文件加载、环境变量覆盖、URL 规范化、必填字段缺失和密码脱敏
 - HTTP 客户端测试覆盖登录、`Token` 请求头使用，以及 token 失效后只重试一次
 - 工具测试覆盖范围互斥、分页默认值、资源枚举校验和接口路径选择
-- 写安全测试证明 `zentao_create_build` 和 `zentao_update_build` 在没有 `confirm=true` 时不会发送 HTTP 请求
+- 写安全测试证明所有写工具在没有 `confirm=true` 时不会发送 HTTP 请求
 - 带确认的版本创建和版本更新测试证明 POST 和 PUT 请求构造正确
+- 带确认的需求创建、需求变更和需求其他字段更新测试证明 POST 和 PUT 请求构造正确
 
 ## 待验证说明
 
