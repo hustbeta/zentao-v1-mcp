@@ -30,6 +30,7 @@ export const endpoints = {
   createStory: { method: "POST", path: "/stories" },
   changeStory: { method: "POST", path: "/stories/{story_id}/change" },
   updateStory: { method: "PUT", path: "/stories/{story_id}" },
+  uploadFile: { method: "POST", path: "/files" },
   projects: { method: "GET", path: "/projects" },
   project: { method: "GET", path: "/projects/{id}" },
   projectBuilds: { method: "GET", path: "/projects/{project_id}/builds" },

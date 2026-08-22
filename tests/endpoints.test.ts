@@ -11,7 +11,9 @@ describe("endpoint registry", () => {
       "token",
       "updateBuild",
       "updateStory",
+      "uploadFile",
     ]);
+    expect(endpoints.uploadFile).toEqual({ method: "POST", path: "/files" });
   });
 
   it("renders path templates", () => {

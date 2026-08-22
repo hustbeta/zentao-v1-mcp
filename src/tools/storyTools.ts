@@ -3,6 +3,7 @@ import { jsonText } from "../mcp/result.js";
 import { createWriteSummary, ensureConfirmed } from "../safety.js";
 import { endpoints, renderPath } from "../zentao/endpoints.js";
 import type { McpServerLike, ToolRequest, ZentaoRequester } from "./queryTools.js";
+import { changeStoryWithImages, type StoryImageChangeArgs } from "./storyImageChange.js";
 
 type Dispatch = (request: ToolRequest) => Promise<unknown> | unknown;
 
@@ -32,6 +33,13 @@ const changeStoryFieldShape = {
   verify: createStoryFieldShape.verify,
 };
 
+const storyImageSchema = z.object({
+  key: z.string().min(1).describe("Placeholder key used by {{image:key}}."),
+  path: z.string().min(1).describe("Absolute local Windows image path."),
+  alt: z.string().optional().describe("Image alt text; defaults from the upload filename."),
+  filename: z.string().min(1).optional().describe("Authoritative upload filename and declared image type."),
+});
+
 const updateStoryFieldShape = {
   module: z.number().int().nonnegative().optional().describe("ZenTao module ID; 0 means no module."),
   source: createStoryFieldShape.source,
@@ -50,6 +58,8 @@ const createStorySchema = z.object({
 const changeStorySchema = z.object({
   story_id: z.number().int().positive().describe("ZenTao story ID."),
   ...changeStoryFieldShape,
+  images: z.array(storyImageSchema).optional().describe("Local images referenced by {{image:key}} placeholders."),
+  expected_revision: z.string().optional().describe("Required with confirm=true when images are present."),
   confirm: z.boolean().optional().describe("Must be true to send the write request."),
 });
 
@@ -93,6 +103,9 @@ export function resolveCreateStoryRequest(args: CreateStoryArgs, dispatch: Dispa
 
 export function resolveChangeStoryRequest(args: ChangeStoryArgs, dispatch: Dispatch) {
   const parsed = changeStorySchema.parse(args);
+  if (parsed.images?.length) {
+    throw new Error("non-empty images must use the story image workflow");
+  }
   const path = renderPath(endpoints.changeStory, { story_id: parsed.story_id });
   const body = pickDefined(parsed, changeStoryFieldNames);
   if (Object.keys(body).length === 0) {
@@ -105,6 +118,18 @@ export function resolveChangeStoryRequest(args: ChangeStoryArgs, dispatch: Dispa
   }
 
   return dispatch(request);
+}
+
+export async function resolveChangeStory(args: ChangeStoryArgs, client: ZentaoRequester) {
+  const parsed = changeStorySchema.parse(args);
+  const images = parsed.images;
+  // Empty and absent image arrays deliberately retain the legacy JSON request and result shapes.
+  if (!images?.length) {
+    return resolveChangeStoryRequest(parsed, (request) => client.request(request));
+  }
+
+  const imageArgs: StoryImageChangeArgs = { ...parsed, spec: parsed.spec ?? "", images };
+  return changeStoryWithImages(imageArgs, client);
 }
 
 export function resolveUpdateStoryRequest(args: UpdateStoryArgs, dispatch: Dispatch) {
@@ -135,10 +160,9 @@ export function registerStoryTools(server: McpServerLike, client: ZentaoRequeste
   // ZenTao separates story content changes from metadata updates; keeping separate tools avoids split writes.
   server.tool(
     "zentao_change_story",
-    "Change ZenTao story title/spec/verify fields. Without confirm=true, returns a dry-run summary instead of writing.",
+    "Change ZenTao story title/spec/verify fields. Local images use {{image:key}} placeholders, and confirmed image changes require the revision returned by dry-run. Without confirm=true, returns a dry-run summary instead of writing.",
     changeStorySchema.shape,
-    async (args) =>
-      jsonText(await resolveChangeStoryRequest(args as ChangeStoryArgs, (request) => client.request(request))),
+    async (args) => jsonText(await resolveChangeStory(args as ChangeStoryArgs, client)),
   );
 
   server.tool(

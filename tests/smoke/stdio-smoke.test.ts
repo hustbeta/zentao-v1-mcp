@@ -43,6 +43,21 @@ describe("mcp smoke", () => {
     expect(listBugsTool?.description).toContain("bug id");
     expect(listBugsTool?.description).toContain("zentao_get_object");
 
+    const changeStoryTool = result.tools.find((tool) => tool.name === "zentao_change_story");
+    expect(changeStoryTool?.inputSchema.properties).toHaveProperty("images");
+    expect(changeStoryTool?.inputSchema.properties).toHaveProperty("expected_revision");
+    expect(result.tools).toHaveLength(18);
+
+    const invalidImages = await client.callTool({
+      name: "zentao_change_story",
+      arguments: { story_id: 9, spec: "{{image:ui}}", images: [{ key: 1, path: "/tmp/ui.png" }] },
+    });
+    expect(invalidImages.isError).toBe(true);
+    expect(invalidImages.content[0]).toMatchObject({ type: "text" });
+    if (invalidImages.content[0].type === "text") {
+      expect(invalidImages.content[0].text).toMatch(/invalid.*argument/i);
+    }
+
     await client.close();
     await server.close();
   });
@@ -69,6 +84,9 @@ describe("mcp smoke", () => {
     expect(result.tools.map((tool) => tool.name)).toContain("zentao_create_story");
     expect(result.tools.map((tool) => tool.name)).toContain("zentao_change_story");
     expect(result.tools.map((tool) => tool.name)).toContain("zentao_update_story");
+    const changeStoryTool = result.tools.find((tool) => tool.name === "zentao_change_story");
+    expect(changeStoryTool?.inputSchema.properties).toHaveProperty("images");
+    expect(changeStoryTool?.inputSchema.properties).toHaveProperty("expected_revision");
     expect(result.tools).toHaveLength(18);
 
     await client.close();
