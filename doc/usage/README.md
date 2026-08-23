@@ -110,4 +110,29 @@ English version: [README.en.md](README.en.md)
 
 创建需求使用 `zentao_create_story`，变更标题、描述和验收标准使用 `zentao_change_story`，更新模块、来源、优先级、分类、工时和关键词等其他字段使用 `zentao_update_story`。需求分类限制为 `feature | interface | performance | safe | experience | improve | other`，需求来源限制为 `customer | user | po | market`，优先级限制为 `1..4`。
 
+### 创建需求时插入本地附图
+
+`zentao_create_story` 可以把本地 PNG、JPEG 或 GIF 插入需求描述。用 `{{image:key}}` 在 `spec` 中声明位置，并在 `images` 中提供对应的绝对路径：
+
+```json
+{
+  "title": "支持登录页改版",
+  "product": 1,
+  "pri": 2,
+  "category": "feature",
+  "spec": "目标效果：\n\n{{image:target_ui}}",
+  "images": [
+    {
+      "key": "target_ui",
+      "path": "D:\\screenshots\\target.png",
+      "alt": "目标登录页"
+    }
+  ]
+}
+```
+
+第一次调用不带 `confirm=true` 时只执行本地预检查并返回试运行摘要；确认调用会再次执行本地检查，使用同一个 Token 和 `uid` 上传图片，恰好创建一次需求，然后读取并核验创建结果。`SUCCESS` 表示创建和核验均通过，`PARTIAL` 表示部分上传或创建后的核验失败，`UNKNOWN` 表示无法确认远端结果。
+
+`images` 缺失或为空时保持原有 JSON 创建行为。创建需求不使用 `expected_revision`；调用方不得自动重试 `UNKNOWN`，因为远端可能已经创建成功。创建失败也可能留下已经上传的文件。变更需求的附图流程见[需求描述附图设计说明](../design/zentao-story-description-image-upload.md)，创建需求的完整流程见[创建需求附图设计说明](../design/zentao-story-create-description-image-upload.md)。
+
 设计上不暴露通用创建或更新工具，也不暴露删除、关闭需求或任意 HTTP 代理。详细边界见[开发说明 — 第一版边界](../dev/README.md#第一版边界)，以及[设计文档 — 写工具](../design/zentao-v1-mcp-design.md#版本写工具)。
