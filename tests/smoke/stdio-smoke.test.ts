@@ -46,6 +46,9 @@ describe("mcp smoke", () => {
     const changeStoryTool = result.tools.find((tool) => tool.name === "zentao_change_story");
     expect(changeStoryTool?.inputSchema.properties).toHaveProperty("images");
     expect(changeStoryTool?.inputSchema.properties).toHaveProperty("expected_revision");
+    const createStoryTool = result.tools.find((tool) => tool.name === "zentao_create_story");
+    expect(createStoryTool?.inputSchema.properties).toHaveProperty("images");
+    expect(createStoryTool?.inputSchema.properties).not.toHaveProperty("expected_revision");
     expect(result.tools).toHaveLength(18);
 
     const invalidImages = await client.callTool({
@@ -56,6 +59,23 @@ describe("mcp smoke", () => {
     expect(invalidImages.content[0]).toMatchObject({ type: "text" });
     if (invalidImages.content[0].type === "text") {
       expect(invalidImages.content[0].text).toMatch(/invalid.*argument/i);
+    }
+
+    const invalidCreateImages = await client.callTool({
+      name: "zentao_create_story",
+      arguments: {
+        title: "story",
+        product: 1,
+        pri: 2,
+        category: "feature",
+        spec: "{{image:ui}}",
+        images: [{ key: 1, path: "/tmp/ui.png" }],
+      },
+    });
+    expect(invalidCreateImages.isError).toBe(true);
+    expect(invalidCreateImages.content[0]).toMatchObject({ type: "text" });
+    if (invalidCreateImages.content[0].type === "text") {
+      expect(invalidCreateImages.content[0].text).toMatch(/invalid.*argument/i);
     }
 
     await client.close();
@@ -87,6 +107,9 @@ describe("mcp smoke", () => {
     const changeStoryTool = result.tools.find((tool) => tool.name === "zentao_change_story");
     expect(changeStoryTool?.inputSchema.properties).toHaveProperty("images");
     expect(changeStoryTool?.inputSchema.properties).toHaveProperty("expected_revision");
+    const createStoryTool = result.tools.find((tool) => tool.name === "zentao_create_story");
+    expect(createStoryTool?.inputSchema.properties).toHaveProperty("images");
+    expect(createStoryTool?.inputSchema.properties).not.toHaveProperty("expected_revision");
     expect(result.tools).toHaveLength(18);
 
     await client.close();

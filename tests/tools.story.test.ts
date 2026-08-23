@@ -5,9 +5,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   resolveChangeStory,
   resolveChangeStoryRequest,
+  resolveCreateStory,
   resolveCreateStoryRequest,
   resolveUpdateStoryRequest,
 } from "../src/tools/storyTools.js";
+import type { ToolRequest } from "../src/tools/queryTools.js";
 
 const storyToolTempDirs: string[] = [];
 
@@ -72,6 +74,150 @@ describe("story tools", () => {
         keywords: "mcp,story",
       },
     });
+  });
+
+  it("keeps exact legacy create behavior when images are absent or empty", async () => {
+    const legacy = await resolveCreateStoryRequest(
+      { title: "story", product: 1, pri: 2, category: "feature", spec: "plain" },
+      async () => undefined,
+    );
+    const client = { request: async () => undefined };
+
+    await expect(resolveCreateStory(
+      { title: "story", product: 1, pri: 2, category: "feature", spec: "plain" },
+      client,
+    )).resolves.toEqual(legacy);
+    await expect(resolveCreateStory(
+      { title: "story", product: 1, pri: 2, category: "feature", spec: "plain", images: [] },
+      client,
+    )).resolves.toEqual(legacy);
+  });
+
+  it("keeps exact legacy confirmed create requests and responses", async () => {
+    for (const includeEmptyImages of [false, true]) {
+      const calls: ToolRequest[] = [];
+      const raw = { id: 31, title: "story" };
+      const args = {
+        title: "story",
+        product: 1,
+        pri: 2,
+        category: "feature" as const,
+        spec: "plain",
+        confirm: true,
+        ...(includeEmptyImages ? { images: [] } : {}),
+      };
+
+      const result = await resolveCreateStory(args, {
+        request: async (request) => {
+          calls.push(request);
+          return raw;
+        },
+      });
+
+      expect(calls).toEqual([{
+        method: "POST",
+        path: "/stories",
+        body: { title: "story", product: 1, pri: 2, category: "feature", spec: "plain" },
+      }]);
+      expect(result).toBe(raw);
+    }
+  });
+
+  it("rejects non-empty create images sent to the legacy dispatcher", () => {
+    expect(() => resolveCreateStoryRequest(
+      {
+        title: "story",
+        product: 1,
+        pri: 2,
+        category: "feature",
+        spec: "{{image:ui}}",
+        images: [{ key: "ui", path: "/tmp/ui.png" }],
+      },
+      async () => undefined,
+    )).toThrow(/image workflow/i);
+  });
+
+  it("routes non-empty create images to local dry-run only", async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), "zentao-create-story-tool-"));
+    storyToolTempDirs.push(tempDir);
+    const imagePath = join(tempDir, "ui.png");
+    await writeFile(imagePath, new Uint8Array([1]));
+    let requests = 0;
+
+    const result = await resolveCreateStory(
+      {
+        title: "story",
+        product: 1,
+        pri: 2,
+        category: "feature",
+        spec: "{{image:ui}}",
+        images: [{ key: "ui", path: imagePath }],
+      },
+      { request: async () => (requests += 1) },
+    );
+
+    expect(result).toMatchObject({ status: "DRY_RUN", phase: "preflight" });
+    expect(requests).toBe(0);
+  });
+
+  it("rejects create image business-rule failures before remote calls", async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), "zentao-create-story-invalid-"));
+    storyToolTempDirs.push(tempDir);
+    const imagePath = join(tempDir, "ui.png");
+    await writeFile(imagePath, new Uint8Array([1]));
+    const cases = [
+      { spec: undefined, images: [{ key: "ui", path: imagePath }] },
+      { spec: "{{image:missing}}", images: [{ key: "missing", path: join(tempDir, "missing.png") }] },
+    ];
+
+    for (const value of cases) {
+      let requests = 0;
+      const result = await resolveCreateStory(
+        {
+          title: "story",
+          product: 1,
+          pri: 2,
+          category: "feature",
+          ...value,
+        },
+        { request: async () => (requests += 1) },
+      );
+      expect(result).toMatchObject({ status: "REJECTED", phase: "preflight" });
+      expect(requests).toBe(0);
+    }
+  });
+
+  it("does not expose or forward unknown create fields", async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), "zentao-create-story-unknown-"));
+    storyToolTempDirs.push(tempDir);
+    const imagePath = join(tempDir, "ui.png");
+    await writeFile(imagePath, new Uint8Array([1]));
+    const args = {
+      title: "story",
+      product: 1,
+      pri: 2,
+      category: "feature" as const,
+      spec: "{{image:ui}}",
+      images: [{ key: "ui", path: imagePath }],
+      expected_revision: "must-not-appear",
+      uid: "caller-controlled",
+      password: "secret-value",
+    };
+
+    const result = await resolveCreateStory(args, { request: async () => undefined });
+    expect(result).toMatchObject({
+      status: "DRY_RUN",
+      request_summary: {
+        request_body: {
+          title: "story",
+          product: 1,
+          pri: 2,
+          category: "feature",
+          spec: "{{image:ui}}",
+        },
+      },
+    });
+    expect(JSON.stringify(result)).not.toMatch(/must-not-appear|caller-controlled|secret-value/);
   });
 
   it("requires at least one change field", () => {
