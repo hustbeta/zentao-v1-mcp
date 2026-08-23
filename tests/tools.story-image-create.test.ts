@@ -82,4 +82,56 @@ describe("createStoryWithImages", () => {
     expect(pinned[1].request).toEqual({ method: "GET", path: "/stories/31" });
     expect(pinned.some((call) => call.request.path.endsWith("/change"))).toBe(false);
   });
+
+  async function confirmedCreate(requestWithToken: ScriptValue[]) {
+    const source = join(tempDir, "source.png"); await writeFile(source, new Uint8Array([1]));
+    const fake = scriptedClient({ getToken: ["token-1"], uploadImage: [{ id: 101, url: "/file-read-101.png" }], requestWithToken });
+    const result = await createStoryWithImages({ body: { title: "new story", product: 1, pri: 2, category: "feature", spec: "{{image:ui}}" }, title: "new story", spec: "{{image:ui}}", images: [{ key: "ui", path: source }], confirm: true }, fake.client);
+    return { fake, result };
+  }
+
+  it.each([
+    ["ordinary 400", httpError(400), "PARTIAL", "known_failure"], ["ordinary 409", httpError(409), "PARTIAL", "known_failure"], ["HTTP 408", httpError(408), "UNKNOWN", "unknown"], ["HTTP 429", httpError(429), "UNKNOWN", "unknown"], ["HTTP 500", httpError(500), "UNKNOWN", "unknown"], ["network error", new Error("socket closed"), "UNKNOWN", "unknown"],
+  ] as const)("classifies %s without retry", async (_name, error, status, outcome) => {
+    const { fake, result } = await confirmedCreate([error]);
+    expect(result).toMatchObject({ status, phase: "create", uploaded: [{ key: "ui" }], failed: [{ outcome }], unattempted: [] });
+    expect(result).not.toHaveProperty("story_id");
+    expect(fake.calls.filter((call) => call.operation === "requestWithToken")).toHaveLength(1);
+    expect(fake.calls.filter((call) => call.operation === "login")).toHaveLength(0);
+    expect(JSON.stringify(result)).not.toMatch(/token-1|password|cookie|"uid"/i);
+  });
+
+  it.each([null, "ok", {}, { id: 0 }, { id: "31" }])("returns UNKNOWN/create for invalid response %j", async (response) => {
+    const { fake, result } = await confirmedCreate([response]);
+    expect(result).toMatchObject({ status: "UNKNOWN", phase: "create", failed: [{ outcome: "unknown" }] });
+    expect(result).not.toHaveProperty("story_id");
+    expect(fake.calls.filter((call) => call.operation === "requestWithToken")).toHaveLength(1);
+  });
+
+  it.each([408, 429, 502, 503, 504])("retries one transient verify HTTP %i with the pinned token", async (status) => {
+    const { fake, result } = await confirmedCreate([{ id: 31 }, httpError(status), createdStory([101])]);
+    expect(result).toMatchObject({ status: "SUCCESS", phase: "verify", story_id: 31 });
+    const pinned = fake.calls.filter((call): call is Extract<FakeCall, { operation: "requestWithToken" }> => call.operation === "requestWithToken");
+    expect(pinned.map((call) => call.request.method)).toEqual(["POST", "GET", "GET"]);
+    expect(new Set(pinned.map((call) => call.token))).toEqual(new Set(["token-1"]));
+    expect(fake.calls.filter((call) => call.operation === "login")).toHaveLength(0);
+  });
+
+  it.each([400, 500])("does not retry verify HTTP %i", async (status) => {
+    const { fake, result } = await confirmedCreate([{ id: 31 }, httpError(status)]);
+    expect(result).toMatchObject({ status: "PARTIAL", phase: "verify", story_id: 31, failed: [{ outcome: "known_failure" }] });
+    expect(fake.calls.filter((call) => call.operation === "requestWithToken")).toHaveLength(2);
+  });
+
+  it("returns PARTIAL/verify after two transient failures", async () => {
+    const { fake, result } = await confirmedCreate([{ id: 31 }, httpError(503), httpError(503)]);
+    expect(result).toMatchObject({ status: "PARTIAL", phase: "verify", story_id: 31, failed: [{ outcome: "unknown" }] });
+    expect(fake.calls.filter((call) => call.operation === "requestWithToken")).toHaveLength(3);
+  });
+
+  it.each([["wrong id", { id: 32 }], ["missing file id", { spec: "<img src=rewritten>" }], ["residual marker", { spec: "file-read-101 {{image:ui}}" }], ["wrong title", { title: "other" }], ["wrong verify", { verify: "other" }]])("returns PARTIAL/verify for %s", async (_name, override) => {
+    const { fake, result } = await confirmedCreate([{ id: 31 }, createdStory([101], override)]);
+    expect(result).toMatchObject({ status: "PARTIAL", phase: "verify", story_id: 31, failed: [{ outcome: "known_failure" }] });
+    expect(fake.calls.filter((call) => call.operation === "requestWithToken")).toHaveLength(2);
+  });
 });

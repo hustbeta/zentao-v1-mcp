@@ -63,7 +63,8 @@ export async function createStoryWithImages(args: StoryImageCreateArgs, client: 
     createResponse = await transport.requestWithToken(createRequest, token);
   } catch (error) {
     // Without a trustworthy story id, retrying an unknown create could create a duplicate story.
-    return createFailure(uploaded, "UNKNOWN", "unknown", error instanceof ZentaoHttpError ? error.message : "ZenTao story create result is unknown");
+    const failure = createFailureOutcome(error);
+    return createFailure(uploaded, failure.status, failure.outcome, error instanceof ZentaoHttpError ? error.message : "ZenTao story create result is unknown");
   }
   const storyID = readCreatedStoryID(createResponse);
   if (storyID === undefined) return createFailure(uploaded, "UNKNOWN", "unknown", "ZenTao story create response did not include a valid id");
@@ -84,21 +85,37 @@ function createFailure(uploaded: UploadedStoryImage[], status: "PARTIAL" | "UNKN
   return { status, phase: "create", uploaded, failed: [{ outcome, error }], unattempted: [] };
 }
 
+function createFailureOutcome(error: unknown): { status: "PARTIAL" | "UNKNOWN"; outcome: StoryImageFailure["outcome"] } {
+  if (error instanceof ZentaoHttpError && error.status >= 400 && error.status < 500 && ![408, 429].includes(error.status)) return { status: "PARTIAL", outcome: "known_failure" };
+  return { status: "UNKNOWN", outcome: "unknown" };
+}
+
 async function verifyCreatedStory(args: StoryImageCreateArgs, storyID: number, transport: StoryImageTransport, token: string, uploaded: UploadedStoryImage[]): Promise<StoryImageCreateResult> {
-  let value: unknown;
-  try {
-    value = await transport.requestWithToken({ method: endpoints.story.method, path: renderPath(endpoints.story, { id: storyID }) }, token);
-  } catch (error) {
-    return { status: "PARTIAL", phase: "verify", story_id: storyID, uploaded, failed: [{ outcome: "unknown", error: error instanceof ZentaoHttpError ? error.message : "ZenTao story verification failed" }], unattempted: [] };
+  const request: ToolRequest = { method: endpoints.story.method, path: renderPath(endpoints.story, { id: storyID }) };
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    let value: unknown;
+    try {
+      value = await transport.requestWithToken(request, token);
+    } catch (error) {
+      const transient = isTransientVerifyFailure(error);
+      if (attempt === 0 && transient) continue;
+      return { status: "PARTIAL", phase: "verify", story_id: storyID, uploaded, failed: [{ outcome: transient ? "unknown" : "known_failure", error: error instanceof ZentaoHttpError ? error.message : "ZenTao story verification failed" }], unattempted: [] };
+    }
+    let story: StorySnapshot;
+    try {
+      story = readStorySnapshot(value);
+    } catch {
+      return { status: "PARTIAL", phase: "verify", story_id: storyID, uploaded, failed: [{ outcome: "known_failure", error: "ZenTao story verification response was invalid" }], unattempted: [] };
+    }
+    const matches = story.id === storyID && uploaded.every(({ file_id }) => story.spec.includes(`file-read-${file_id}`)) && !story.spec.includes("{{image:") && story.title === args.title && story.verify === (args.verify ?? "");
+    return matches
+      ? { status: "SUCCESS", phase: "verify", story_id: storyID, uploaded, failed: [], unattempted: [] }
+      : { status: "PARTIAL", phase: "verify", story_id: storyID, uploaded, failed: [{ outcome: "known_failure", error: "ZenTao story verification did not match the requested image create" }], unattempted: [] };
   }
-  let story: StorySnapshot;
-  try {
-    story = readStorySnapshot(value);
-  } catch {
-    return { status: "PARTIAL", phase: "verify", story_id: storyID, uploaded, failed: [{ outcome: "known_failure", error: "ZenTao story verification response was invalid" }], unattempted: [] };
-  }
-  const matches = story.id === storyID && uploaded.every(({ file_id }) => story.spec.includes(`file-read-${file_id}`)) && !story.spec.includes("{{image:") && story.title === args.title && story.verify === (args.verify ?? "");
-  return matches
-    ? { status: "SUCCESS", phase: "verify", story_id: storyID, uploaded, failed: [], unattempted: [] }
-    : { status: "PARTIAL", phase: "verify", story_id: storyID, uploaded, failed: [{ outcome: "known_failure", error: "ZenTao story verification did not match the requested image create" }], unattempted: [] };
+  throw new Error("unreachable");
+}
+
+function isTransientVerifyFailure(error: unknown): boolean {
+  if (!(error instanceof ZentaoHttpError)) return true;
+  return [408, 429, 502, 503, 504].includes(error.status);
 }
