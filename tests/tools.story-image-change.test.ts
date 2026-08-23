@@ -14,12 +14,14 @@ import type { ToolRequest, ZentaoRequester } from "../src/tools/queryTools.js";
 import {
   changeStoryWithImages,
   computeStoryRevision,
+  type StoryImageResult,
+} from "../src/tools/storyImageChange.js";
+import {
   prepareStoryImages,
   readPreparedImage,
   readStorySnapshot,
   replaceImagePlaceholders,
-  type StoryImageResult,
-} from "../src/tools/storyImageChange.js";
+} from "../src/tools/storyImageWorkflow.js";
 
 vi.mock("node:fs/promises", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs/promises")>();
