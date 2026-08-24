@@ -18,8 +18,33 @@ export type ZentaoConfig = {
   timeout_seconds: number;
 };
 
+const BaseUrlSchema = z.string().url().superRefine((value, ctx) => {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return;
+  }
+
+  if (url.username || url.password) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "base_url must not include URL credentials" });
+  }
+  if (value.includes("?")) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "base_url must not include a query string" });
+  }
+  if (value.includes("#")) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "base_url must not include a fragment" });
+  }
+  if (url.pathname.replace(/\/+$/, "").endsWith("/tokens")) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "base_url must be the API base URL ending in /api.php/v1, not a /tokens endpoint",
+    });
+  }
+});
+
 const RawConfigSchema = z.object({
-  base_url: z.string().url(),
+  base_url: BaseUrlSchema,
   account: z.string().min(1),
   password: z.string().min(1),
   timeout_seconds: z.number().int().positive().default(20),
@@ -61,12 +86,13 @@ export function loadConfigFromSources(input: {
 
   const parsed = RawConfigSchema.parse(merged);
   const baseUrl = parsed.base_url.replace(/\/+$/, "");
+  // Accept the documented API base directly while preserving legacy site URLs that need the fixed prefix.
+  const apiBaseUrl = baseUrl.endsWith("/api.php/v1") ? baseUrl : `${baseUrl}/api.php/v1`;
 
   return {
     ...parsed,
     base_url: baseUrl,
-    // ZenTao RESTful API v1 docs use this fixed prefix; endpoint registry paths stay relative to it.
-    api_base_url: `${baseUrl}/api.php/v1`,
+    api_base_url: apiBaseUrl,
   };
 }
 
@@ -81,7 +107,7 @@ export function writeExampleConfig(path = defaultConfigPath()): void {
     path,
     `${JSON.stringify(
       {
-        base_url: "https://zentao.example.com",
+        base_url: "https://zentao.example.com/zentao/api.php/v1",
         account: "your-account",
         password: "your-password",
         timeout_seconds: 20,
