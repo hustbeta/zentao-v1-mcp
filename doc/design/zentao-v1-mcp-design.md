@@ -45,12 +45,14 @@ npx -y zentao-v1-mcp
 
 ```json
 {
-  "base_url": "https://zentao.example.com",
+  "base_url": "https://zentao.example.com/zentao/api.php/v1",
   "account": "your-account",
   "password": "your-password",
   "timeout_seconds": 20
 }
 ```
+
+推荐将 `base_url` 填写为以 `/api.php/v1` 结尾的完整禅道 REST API v1 基础地址。旧配置中的禅道站点地址仍然兼容，程序会在归一化末尾 `/` 后为其追加固定的 `/api.php/v1` 路径；自定义 URL rewrite API 路径不在当前支持范围。`base_url` 不得包含 `/tokens` 端点、query、fragment 或 URL credentials。
 
 环境变量会覆盖配置文件：
 
@@ -65,7 +67,7 @@ npx -y zentao-v1-mcp
 
 服务器通过以下接口登录：
 
-- `POST /tokens`
+- `POST /tokens`（相对于 API 基础地址）
 - 请求体：`{ "account": "...", "password": "..." }`
 
 返回的 `token` 会缓存在内存中，并通过后续请求的 `Token` 请求头发送。如果请求遇到认证类错误，客户端可以重新登录一次并重试该请求一次。一次重试上限可以避免无效凭据或权限问题变成无限循环。
@@ -271,8 +273,8 @@ npx -y zentao-v1-mcp
 ## 错误处理
 
 - 配置缺失时返回清晰的配置错误，且不打印敏感信息。
-- 登录失败时返回简洁的认证或配置错误，且不打印密码。
-- 权限或未找到响应保留禅道错误体，并添加 MCP 侧资源和路径。
+- 登录 HTTP 或网络失败时，错误包含请求 method 和完整目标 URL；不包含账号、密码、请求体或响应体。
+- 普通 API 错误继续使用相对路径，并保留禅道错误体，同时添加 MCP 侧资源和路径。
 - 范围冲突（例如同时传入 `product_id` 和 `project_id`）在发送 HTTP 请求前失败。
 - 不支持的资源枚举值在发送 HTTP 请求前失败。
 - 写工具没有 `confirm=true` 时返回试运行摘要，不发起 HTTP 请求。
@@ -288,7 +290,8 @@ npx -y zentao-v1-mcp
 - stdio `tools/list` 烟测
 - `tools/list` 确认暴露工具少于 20 个
 - 配置测试覆盖配置文件加载、环境变量覆盖、URL 规范化、必填字段缺失和密码脱敏
-- HTTP 客户端测试覆盖登录、`Token` 请求头使用，以及 token 失效后只重试一次
+- 配置测试覆盖完整 API 基础地址和旧站点地址两种格式、末尾 `/` 归一化，以及拒绝 `/tokens`、query、fragment 和 URL credentials
+- HTTP 客户端测试覆盖登录、`Token` 请求头使用、token 失效后只重试一次，以及登录 HTTP/网络错误的 method、完整 URL 和敏感数据边界
 - 工具测试覆盖范围互斥、分页默认值、资源枚举校验和接口路径选择
 - 写安全测试证明所有写工具在没有 `confirm=true` 时不会发送 HTTP 请求
 - 带确认的版本创建和版本更新测试证明 POST 和 PUT 请求构造正确
