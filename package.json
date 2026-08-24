@@ -1,6 +1,6 @@
 {
   "name": "zentao-v1-mcp",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "MCP server for ZenTao RESTful API v1",
   "repository": {
     "type": "git",
