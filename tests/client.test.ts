@@ -38,6 +38,60 @@ describe("ZentaoClient", () => {
     expect(calls[1].init?.headers).toMatchObject({ Token: "abc" });
   });
 
+  it("reports the full login URL and status without response secrets", async () => {
+    const config = testConfig();
+    const client = new ZentaoClient({
+      config,
+      fetchImpl: async () =>
+        jsonResponse({ account: config.account, password: config.password, detail: "login body" }, 401),
+    });
+
+    let caught: unknown;
+    try {
+      await client.login();
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(Error);
+    expect((caught as Error).message).toBe(
+      "ZenTao login failed: POST https://zentao.example.com/api.php/v1/tokens returned HTTP 401",
+    );
+    expect((caught as Error).message).not.toContain(config.account);
+    expect((caught as Error).message).not.toContain(config.password);
+    expect((caught as Error).message).not.toContain("login body");
+  });
+
+  it.each([
+    ["Error", "network error"],
+    ["TimeoutError", "request timed out"],
+  ] as const)("reports the login URL for %s failures", async (name, reason) => {
+    const config = testConfig();
+    const transportError = new Error(`${config.account} ${config.password} raw transport detail`);
+    transportError.name = name;
+    const client = new ZentaoClient({
+      config,
+      fetchImpl: async () => {
+        throw transportError;
+      },
+    });
+
+    let caught: unknown;
+    try {
+      await client.login();
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(Error);
+    expect((caught as Error).message).toBe(
+      `ZenTao login failed: POST https://zentao.example.com/api.php/v1/tokens failed: ${reason}`,
+    );
+    expect((caught as Error).message).not.toContain(config.account);
+    expect((caught as Error).message).not.toContain(config.password);
+    expect((caught as Error).message).not.toContain("raw transport detail");
+  });
+
   it("re-logins once after an auth-style response", async () => {
     let productCalls = 0;
     let tokenCalls = 0;

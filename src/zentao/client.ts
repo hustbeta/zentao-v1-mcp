@@ -46,21 +46,26 @@ export class ZentaoClient {
   }
 
   async login(): Promise<string> {
-    const response = await this.fetchJson(`${this.config.api_base_url}/tokens`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        account: this.config.account,
-        password: this.config.password,
-      }),
-    });
+    const method = "POST";
+    const url = `${this.config.api_base_url}/tokens`;
+    let response: { ok: boolean; status: number; body: unknown };
+    try {
+      response = await this.fetchJson(url, {
+        method,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          account: this.config.account,
+          password: this.config.password,
+        }),
+      });
+    } catch (error) {
+      // Transport details are intentionally not displayed because they may contain request context or secrets.
+      const reason = error instanceof Error && error.name === "TimeoutError" ? "request timed out" : "network error";
+      throw new Error(`ZenTao login failed: ${method} ${url} failed: ${reason}`, { cause: error });
+    }
 
     if (!response.ok) {
-      throw new ZentaoHttpError({
-        status: response.status,
-        path: "/tokens",
-        responseBody: response.body,
-      });
+      throw new Error(`ZenTao login failed: ${method} ${url} returned HTTP ${response.status}`);
     }
 
     if (!isTokenResponse(response.body)) {

@@ -29,12 +29,14 @@ zentao-v1-mcp init-config
 
 ```json
 {
-  "base_url": "https://zentao.example.com",
+  "base_url": "https://zentao.example.com/zentao/api.php/v1",
   "account": "your-account",
   "password": "your-password",
   "timeout_seconds": 20
 }
 ```
+
+`base_url` 推荐填写以 `/api.php/v1` 结尾的完整禅道 REST API v1 基础地址。例如禅道安装在 `https://zentao.example.com/zentao`，应填写 `https://zentao.example.com/zentao/api.php/v1`。旧配置中的禅道站点地址仍然兼容，程序会为其追加固定 API 路径；自定义 URL rewrite API 路径暂不支持。
 
 配置完毕后进行登录测试，确认配置正确：
 
@@ -51,7 +53,7 @@ zentao-v1-mcp validate-config --login
       "command": "npx",
       "args": ["-y", "zentao-v1-mcp"],
       "env": {
-        "ZENTAO_BASE_URL": "https://zentao.example.com",
+        "ZENTAO_BASE_URL": "https://zentao.example.com/zentao/api.php/v1",
         "ZENTAO_ACCOUNT": "your-account",
         "ZENTAO_PASSWORD": "your-password"
       }

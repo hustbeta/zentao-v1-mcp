@@ -2,10 +2,31 @@ import { describe, expect, it } from "vitest";
 import { loadConfigFromSources, redactConfig } from "../src/config.js";
 
 describe("config", () => {
-  it("normalizes base_url and loads file values", () => {
+  it.each([
+    [
+      "https://zentao.example.com",
+      "https://zentao.example.com",
+      "https://zentao.example.com/api.php/v1",
+    ],
+    [
+      "https://zentao.example.com/",
+      "https://zentao.example.com",
+      "https://zentao.example.com/api.php/v1",
+    ],
+    [
+      "https://zentao.example.com/api.php/v1",
+      "https://zentao.example.com/api.php/v1",
+      "https://zentao.example.com/api.php/v1",
+    ],
+    [
+      "https://zentao.example.com/api.php/v1/",
+      "https://zentao.example.com/api.php/v1",
+      "https://zentao.example.com/api.php/v1",
+    ],
+  ] as const)("normalizes base_url %s", (input, baseUrl, apiBaseUrl) => {
     const config = loadConfigFromSources({
       fileConfig: {
-        base_url: "https://zentao.example.com/",
+        base_url: input,
         account: "demo",
         password: "secret",
         timeout_seconds: 20,
@@ -14,11 +35,31 @@ describe("config", () => {
     });
 
     expect(config).toMatchObject({
-      base_url: "https://zentao.example.com",
-      api_base_url: "https://zentao.example.com/api.php/v1",
+      base_url: baseUrl,
+      api_base_url: apiBaseUrl,
       account: "demo",
       timeout_seconds: 20,
     });
+  });
+
+  it.each([
+    ["https://zentao.example.com/api.php/v1/tokens", /ending in \/api\.php\/v1.*\/tokens/i],
+    ["https://zentao.example.com/api.php/v1/tokens/", /ending in \/api\.php\/v1.*\/tokens/i],
+    ["https://demo:secret@zentao.example.com/api.php/v1", /credentials/i],
+    ["https://zentao.example.com/api.php/v1?tenant=demo", /query/i],
+    ["https://zentao.example.com/api.php/v1#login", /fragment/i],
+  ] as const)("rejects unsafe base_url %s", (baseUrl, expected) => {
+    expect(() =>
+      loadConfigFromSources({
+        fileConfig: {
+          base_url: baseUrl,
+          account: "demo",
+          password: "secret",
+          timeout_seconds: 20,
+        },
+        env: {},
+      }),
+    ).toThrow(expected);
   });
 
   it("lets environment variables override file values", () => {

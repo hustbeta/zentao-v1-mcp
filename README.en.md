@@ -35,12 +35,14 @@ Example:
 
 ```json
 {
-  "base_url": "https://zentao.example.com",
+  "base_url": "https://zentao.example.com/zentao/api.php/v1",
   "account": "your-account",
   "password": "your-password",
   "timeout_seconds": 20
 }
 ```
+
+Set `base_url` to the complete ZenTao REST API v1 base URL ending in `/api.php/v1`. For example, if ZenTao is installed at `https://zentao.example.com/zentao`, use `https://zentao.example.com/zentao/api.php/v1`. Legacy site URLs remain compatible and receive the fixed API path automatically. Custom URL-rewrite API paths are not supported.
 
 Environment variables override the config file:
 
@@ -68,7 +70,7 @@ zentao-v1-mcp print-config
       "command": "npx",
       "args": ["-y", "zentao-v1-mcp"],
       "env": {
-        "ZENTAO_BASE_URL": "https://zentao.example.com",
+        "ZENTAO_BASE_URL": "https://zentao.example.com/zentao/api.php/v1",
         "ZENTAO_ACCOUNT": "your-account",
         "ZENTAO_PASSWORD": "your-password"
       }
