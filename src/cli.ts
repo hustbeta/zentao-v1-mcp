@@ -40,5 +40,6 @@ try {
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
   console.error(`Config error: ${message}`);
-  process.exit(1);
+  // Let native fetch/libuv cleanup finish before Node exits, especially on Windows.
+  process.exitCode = 1;
 }
